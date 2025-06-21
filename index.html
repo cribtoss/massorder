@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>대량 주문</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/webfontworld/naver/NanumSquare.css">
+  <style>
+    body {
+      font-family: 'NanumSquare', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    header {
+      background-color: #222;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+    }
+    .tabs {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      margin: 0 5px;
+    }
+    .tab-btn.active {
+      background-color: #ddd;
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+      padding: 20px;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    .copy-btn, .add-row-btn {
+      padding: 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin: 5px 0;
+    }
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 5px;
+    }
+  </style>
+</head>
+<body>
+  <header>대량 주문</header>
+
+  <div class="tabs">
+    <div class="tab-btn active" onclick="switchTab('single')">단품 대량주문</div>
+    <div class="tab-btn" onclick="switchTab('combo')">조회수+좋아요 세트</div>
+  </div>
+
+  <!-- 단품 대량주문 -->
+  <div id="single" class="tab-content active">
+    <table id="single-table">
+      <thead>
+        <tr>
+          <th>서비스</th>
+          <th>링크</th>
+          <th>수량</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+    <button class="add-row-btn" onclick="addRow('single')">표 추가</button>
+    <button class="copy-btn" onclick="copyTable('single')">복사하기</button>
+  </div>
+
+  <!-- 조회수+좋아요 세트 -->
+  <div id="combo" class="tab-content">
+    <table id="combo-table">
+      <thead>
+        <tr>
+          <th>조회수 서비스</th>
+          <th>좋아요 서비스</th>
+          <th>링크</th>
+          <th>조회수 수량</th>
+          <th>좋아요 비율(%)</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+    <button class="add-row-btn" onclick="addRow('combo')">표 추가</button>
+    <button class="copy-btn" onclick="copyTable('combo')">복사하기</button>
+  </div>
+
+  <script>
+    // 수정 가능한 드롭다운 옵션
+    const serviceOptions = ['150(인스타-조회수)', '160(인스타-조회수)', '113(인스타-좋아요)']; // 서비스 옵션
+    const quantityOptions = [100, 500, 1000, 2000, 3000, 5000, 10000]; // 수량 옵션
+    const ratioOptions = [10, 20, 30, 50, 70, 100]; // 좋아요 비율 옵션
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      document.getElementById(tab).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function createSelect(options) {
+      const select = document.createElement('select');
+      options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        select.appendChild(o);
+      });
+      return select;
+    }
+
+    function addRow(type) {
+      const table = document.getElementById(`${type}-table`).querySelector('tbody');
+      const tr = document.createElement('tr');
+
+      if (type === 'single') {
+        const service = document.createElement('td');
+        service.appendChild(createSelect(serviceOptions));
+
+        const link = document.createElement('td');
+        const linkInput = document.createElement('input');
+        linkInput.type = 'text';
+        link.appendChild(linkInput);
+
+        const qty = document.createElement('td');
+        const qtySelect = createSelect(quantityOptions);
+        qtySelect.addEventListener('change', () => {
+          qtyInput.value = qtySelect.value;
+        });
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.value = quantityOptions[0];
+        qty.appendChild(qtySelect);
+        qty.appendChild(qtyInput);
+
+        tr.append(service, link, qty);
+      } else {
+        const vService = document.createElement('td');
+        vService.appendChild(createSelect(serviceOptions));
+
+        const lService = document.createElement('td');
+        lService.appendChild(createSelect(serviceOptions));
+
+        const link = document.createElement('td');
+        const linkInput = document.createElement('input');
+        linkInput.type = 'text';
+        link.appendChild(linkInput);
+
+        const vQty = document.createElement('td');
+        const vQtyInput = document.createElement('input');
+        vQtyInput.type = 'number';
+        vQtyInput.value = 100;
+        vQty.appendChild(vQtyInput);
+
+        const ratio = document.createElement('td');
+        const ratioSelect = createSelect(ratioOptions);
+        ratioSelect.addEventListener('change', () => {
+          ratioInput.value = ratioSelect.value;
+        });
+        const ratioInput = document.createElement('input');
+        ratioInput.type = 'number';
+        ratioInput.value = ratioOptions[0];
+        ratio.appendChild(ratioSelect);
+        ratio.appendChild(ratioInput);
+
+        tr.append(vService, lService, link, vQty, ratio);
+      }
+      table.appendChild(tr);
+    }
+
+    function copyTable(type) {
+      let rows = document.querySelectorAll(`#${type}-table tbody tr`);
+      let lines = [];
+
+      if (type === 'single') {
+        rows.forEach(row => {
+          const service = row.cells[0].querySelector('select').value;
+          const link = row.cells[1].querySelector('input').value.trim();
+          const qty = row.cells[2].querySelector('input').value;
+          if (link) lines.push(`${service} | ${link} | ${qty}`);
+        });
+      } else {
+        rows.forEach(row => {
+          const vService = row.cells[0].querySelector('select').value;
+          const lService = row.cells[1].querySelector('select').value;
+          const link = row.cells[2].querySelector('input').value.trim();
+          const vQty = Number(row.cells[3].querySelector('input').value);
+          const ratio = Number(row.cells[4].querySelector('input').value);
+          const lQty = Math.round((vQty * ratio) / 100);
+          if (link) {
+            lines.push(`${vService} | ${link} | ${vQty}`);
+            lines.push(`${lService} | ${link} | ${lQty}`);
+          }
+        });
+      }
+      navigator.clipboard.writeText(lines.join('\n')).then(() => alert('복사 완료!'));
+    }
+
+    for (let i = 0; i < 3; i++) addRow('single');
+    for (let i = 0; i < 3; i++) addRow('combo');
+  </script>
+</body>
+</html>
