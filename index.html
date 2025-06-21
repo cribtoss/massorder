@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>대량 주문</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/webfontworld/naver/NanumSquare.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/webfontworld/naver/NanumSquare.css" />
   <style>
     body {
       font-family: 'NanumSquare', sans-serif;
@@ -30,6 +30,7 @@
       background-color: #eee;
       border: 1px solid #ccc;
       margin: 0 5px;
+      user-select: none;
     }
     .tab-btn.active {
       background-color: #ddd;
@@ -54,15 +55,43 @@
     }
     .copy-btn, .add-row-btn {
       padding: 10px;
-      background-color: #4CAF50;
+      background-color: #4caf50;
       color: white;
       border: none;
       cursor: pointer;
-      margin: 5px 0;
+      margin: 5px 5px 20px 0;
+      border-radius: 4px;
     }
     select, input[type="text"], input[type="number"] {
       width: 100%;
+      box-sizing: border-box;
       padding: 5px;
+      font-size: 14px;
+    }
+    .add-rows-container {
+      margin-bottom: 20px;
+    }
+    .add-rows-container input[type="number"] {
+      width: 60px;
+      margin-right: 8px;
+    }
+    .add-rows-container button {
+      padding: 6px 12px;
+      background-color: #2196f3;
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .top-selectors {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .top-selectors > div {
+      min-width: 120px;
     }
   </style>
 </head>
@@ -76,6 +105,23 @@
 
   <!-- 단품 대량주문 -->
   <div id="single" class="tab-content active">
+    <div class="top-selectors">
+      <div>
+        <label for="single-service-top">서비스</label>
+        <select id="single-service-top"></select>
+      </div>
+      <div>
+        <label for="single-quantity-top">수량</label>
+        <select id="single-quantity-top"></select>
+      </div>
+    </div>
+
+    <div class="add-rows-container">
+      <input type="number" id="single-add-rows" min="1" max="20" value="1" />
+      <button onclick="addRows('single')">행 추가</button>
+      <button onclick="addRows('single', 5)">5행 추가</button>
+    </div>
+
     <table id="single-table">
       <thead>
         <tr>
@@ -84,15 +130,34 @@
           <th>수량</th>
         </tr>
       </thead>
-      <tbody>
-      </tbody>
+      <tbody></tbody>
     </table>
-    <button class="add-row-btn" onclick="addRow('single')">표 추가</button>
     <button class="copy-btn" onclick="copyTable('single')">복사하기</button>
   </div>
 
   <!-- 조회수+좋아요 세트 -->
   <div id="combo" class="tab-content">
+    <div class="top-selectors">
+      <div>
+        <label for="combo-view-service-top">조회수 서비스</label>
+        <select id="combo-view-service-top"></select>
+      </div>
+      <div>
+        <label for="combo-like-service-top">좋아요 서비스</label>
+        <select id="combo-like-service-top"></select>
+      </div>
+      <div>
+        <label for="combo-ratio-top">좋아요 비율 (%)</label>
+        <select id="combo-ratio-top"></select>
+      </div>
+    </div>
+
+    <div class="add-rows-container">
+      <input type="number" id="combo-add-rows" min="1" max="20" value="1" />
+      <button onclick="addRows('combo')">행 추가</button>
+      <button onclick="addRows('combo', 5)">5행 추가</button>
+    </div>
+
     <table id="combo-table">
       <thead>
         <tr>
@@ -100,129 +165,242 @@
           <th>좋아요 서비스</th>
           <th>링크</th>
           <th>조회수 수량</th>
-          <th>좋아요 비율(%)</th>
+          <th>좋아요 비율 (%)</th>
         </tr>
       </thead>
-      <tbody>
-      </tbody>
+      <tbody></tbody>
     </table>
-    <button class="add-row-btn" onclick="addRow('combo')">표 추가</button>
     <button class="copy-btn" onclick="copyTable('combo')">복사하기</button>
   </div>
 
   <script>
-    // 수정 가능한 드롭다운 옵션
-    const serviceOptions = ['150(인스타-조회수)', '160(인스타-조회수)', '113(인스타-좋아요)']; // 서비스 옵션
-    const quantityOptions = [100, 500, 1000, 2000, 3000, 5000, 10000]; // 수량 옵션
-    const ratioOptions = [10, 20, 30, 50, 70, 100]; // 좋아요 비율 옵션
+    // 옵션들 (수정/추가 가능)
+    const serviceOptions = ['서비스 A', '서비스 B', '서비스 C'];
+    const quantityOptions = [100, 300, 500, 1000, 3000, 5000];
+    const ratioOptions = [10, 20, 30, 50, 70, 100];
 
+    // 초기 셀렉트 박스 요소들
+    const singleServiceTop = document.getElementById('single-service-top');
+    const singleQuantityTop = document.getElementById('single-quantity-top');
+    const comboViewServiceTop = document.getElementById('combo-view-service-top');
+    const comboLikeServiceTop = document.getElementById('combo-like-service-top');
+    const comboRatioTop = document.getElementById('combo-ratio-top');
+
+    // 테이블 바디들
+    const singleTableBody = document.querySelector('#single-table tbody');
+    const comboTableBody = document.querySelector('#combo-table tbody');
+
+    // 탭 전환 함수
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
       document.getElementById(tab).classList.add('active');
       event.target.classList.add('active');
     }
 
-    function createSelect(options) {
-      const select = document.createElement('select');
+    // select 요소에 옵션 세팅하는 함수
+    function fillSelectOptions(select, options) {
+      select.innerHTML = '';
       options.forEach(opt => {
-        const o = document.createElement('option');
-        o.value = opt;
-        o.textContent = opt;
-        select.appendChild(o);
+        const option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt;
+        select.appendChild(option);
       });
-      return select;
     }
 
-    function addRow(type) {
-      const table = document.getElementById(`${type}-table`).querySelector('tbody');
-      const tr = document.createElement('tr');
-
+    // 최상단 셀렉트 박스가 바뀌면 테이블 모든 행에 기본값 세팅하는 함수 (수동 변경 가능)
+    function updateTableDefaultValues(type) {
       if (type === 'single') {
-        const service = document.createElement('td');
-        service.appendChild(createSelect(serviceOptions));
+        const serviceVal = singleServiceTop.value;
+        const quantityVal = singleQuantityTop.value;
+        [...singleTableBody.children].forEach(row => {
+          const serviceSelect = row.cells[0].querySelector('select, input');
+          const qtyInput = row.cells[2].querySelector('input');
+          // 서비스는 select or input 있을 수 있어서 대응
+          if(serviceSelect.tagName === 'SELECT') serviceSelect.value = serviceVal;
+          else serviceSelect.value = serviceVal;
+          qtyInput.value = quantityVal;
+        });
+      } else if (type === 'combo') {
+        const vServiceVal = comboViewServiceTop.value;
+        const lServiceVal = comboLikeServiceTop.value;
+        const ratioVal = comboRatioTop.value;
 
-        const link = document.createElement('td');
+        [...comboTableBody.children].forEach(row => {
+          const vServiceSelect = row.cells[0].querySelector('select, input');
+          const lServiceSelect = row.cells[1].querySelector('select, input');
+          const ratioSelect = row.cells[4].querySelector('select, input');
+          // 조회수 서비스
+          if(vServiceSelect.tagName === 'SELECT') vServiceSelect.value = vServiceVal;
+          else vServiceSelect.value = vServiceVal;
+          // 좋아요 서비스
+          if(lServiceSelect.tagName === 'SELECT') lServiceSelect.value = lServiceVal;
+          else lServiceSelect.value = lServiceVal;
+          // 좋아요 비율
+          if(ratioSelect.tagName === 'SELECT') ratioSelect.value = ratioVal;
+          else ratioSelect.value = ratioVal;
+        });
+      }
+    }
+
+    // 행 생성 함수 (single/combo)
+    function createRow(type) {
+      const tr = document.createElement('tr');
+      if (type === 'single') {
+        // 서비스 셀 (select + input 지원, 우린 input으로 처리하지만 수동 변경 가능)
+        const tdService = document.createElement('td');
+        const serviceInput = document.createElement('input');
+        serviceInput.type = 'text';
+        serviceInput.value = singleServiceTop.value;
+        tdService.appendChild(serviceInput);
+
+        // 링크 셀 (text input)
+        const tdLink = document.createElement('td');
         const linkInput = document.createElement('input');
         linkInput.type = 'text';
-        link.appendChild(linkInput);
+        tdLink.appendChild(linkInput);
 
-        const qty = document.createElement('td');
-        const qtySelect = createSelect(quantityOptions);
-        qtySelect.addEventListener('change', () => {
-          qtyInput.value = qtySelect.value;
-        });
+        // 수량 셀 (number input)
+        const tdQty = document.createElement('td');
         const qtyInput = document.createElement('input');
         qtyInput.type = 'number';
-        qtyInput.value = quantityOptions[0];
-        qty.appendChild(qtySelect);
-        qty.appendChild(qtyInput);
+        qtyInput.min = '1';
+        qtyInput.value = singleQuantityTop.value;
+        tdQty.appendChild(qtyInput);
 
-        tr.append(service, link, qty);
-      } else {
-        const vService = document.createElement('td');
-        vService.appendChild(createSelect(serviceOptions));
+        tr.append(tdService, tdLink, tdQty);
 
-        const lService = document.createElement('td');
-        lService.appendChild(createSelect(serviceOptions));
+      } else if (type === 'combo') {
+        // 조회수 서비스 셀
+        const tdVService = document.createElement('td');
+        const vServiceInput = document.createElement('input');
+        vServiceInput.type = 'text';
+        vServiceInput.value = comboViewServiceTop.value;
+        tdVService.appendChild(vServiceInput);
 
-        const link = document.createElement('td');
+        // 좋아요 서비스 셀
+        const tdLService = document.createElement('td');
+        const lServiceInput = document.createElement('input');
+        lServiceInput.type = 'text';
+        lServiceInput.value = comboLikeServiceTop.value;
+        tdLService.appendChild(lServiceInput);
+
+        // 링크 셀
+        const tdLink = document.createElement('td');
         const linkInput = document.createElement('input');
         linkInput.type = 'text';
-        link.appendChild(linkInput);
+        tdLink.appendChild(linkInput);
 
-        const vQty = document.createElement('td');
+        // 조회수 수량 셀
+        const tdVQty = document.createElement('td');
         const vQtyInput = document.createElement('input');
         vQtyInput.type = 'number';
+        vQtyInput.min = '1';
         vQtyInput.value = 100;
-        vQty.appendChild(vQtyInput);
+        tdVQty.appendChild(vQtyInput);
 
-        const ratio = document.createElement('td');
-        const ratioSelect = createSelect(ratioOptions);
-        ratioSelect.addEventListener('change', () => {
-          ratioInput.value = ratioSelect.value;
-        });
+        // 좋아요 비율 셀
+        const tdRatio = document.createElement('td');
         const ratioInput = document.createElement('input');
         ratioInput.type = 'number';
-        ratioInput.value = ratioOptions[0];
-        ratio.appendChild(ratioSelect);
-        ratio.appendChild(ratioInput);
+        ratioInput.min = '1';
+        ratioInput.max = '100';
+        ratioInput.value = comboRatioTop.value;
+        tdRatio.appendChild(ratioInput);
 
-        tr.append(vService, lService, link, vQty, ratio);
+        tr.append(tdVService, tdLService, tdLink, tdVQty, tdRatio);
       }
-      table.appendChild(tr);
+      return tr;
     }
 
-    function copyTable(type) {
-      let rows = document.querySelectorAll(`#${type}-table tbody tr`);
-      let lines = [];
+    // 다중 행 추가 함수
+    function addRows(type, count = null) {
+      let c = count;
+      if (!c) {
+        // 입력창 숫자 가져오기
+        if(type === 'single') {
+          c = Number(document.getElementById('single-add-rows').value) || 1;
+        } else {
+          c = Number(document.getElementById('combo-add-rows').value) || 1;
+        }
+      }
+      const tbody = type === 'single' ? singleTableBody : comboTableBody;
+      for(let i=0; i < c; i++){
+        const newRow = createRow(type);
+        tbody.appendChild(newRow);
+      }
+    }
 
+    // 기본 10줄 초기 생성 함수
+    function initRows() {
+      // single 10줄
+      for(let i=0; i < 10; i++) {
+        singleTableBody.appendChild(createRow('single'));
+      }
+      // combo 10줄
+      for(let i=0; i < 10; i++) {
+        comboTableBody.appendChild(createRow('combo'));
+      }
+    }
+
+    // 복사 함수
+    function copyTable(type) {
+      let rows;
+      let lines = [];
       if (type === 'single') {
+        rows = [...singleTableBody.children];
         rows.forEach(row => {
-          const service = row.cells[0].querySelector('select').value;
+          const service = row.cells[0].querySelector('input').value.trim();
           const link = row.cells[1].querySelector('input').value.trim();
-          const qty = row.cells[2].querySelector('input').value;
-          if (link) lines.push(`${service} | ${link} | ${qty}`);
-        });
-      } else {
-        rows.forEach(row => {
-          const vService = row.cells[0].querySelector('select').value;
-          const lService = row.cells[1].querySelector('select').value;
-          const link = row.cells[2].querySelector('input').value.trim();
-          const vQty = Number(row.cells[3].querySelector('input').value);
-          const ratio = Number(row.cells[4].querySelector('input').value);
-          const lQty = Math.round((vQty * ratio) / 100);
+          const qty = row.cells[2].querySelector('input').value.trim();
           if (link) {
+            lines.push(`${service} | ${link} | ${qty}`);
+          }
+        });
+      } else if (type === 'combo') {
+        rows = [...comboTableBody.children];
+        rows.forEach(row => {
+          const vService = row.cells[0].querySelector('input').value.trim();
+          const lService = row.cells[1].querySelector('input').value.trim();
+          const link = row.cells[2].querySelector('input').value.trim();
+          const vQty = row.cells[3].querySelector('input').value.trim();
+          const ratio = row.cells[4].querySelector('input').value.trim();
+
+          if (link) {
+            // 조회수 서비스 줄
             lines.push(`${vService} | ${link} | ${vQty}`);
-            lines.push(`${lService} | ${link} | ${lQty}`);
+            // 좋아요 서비스 줄 (조회수 수량 * 좋아요 비율 계산 x%)
+            const likeQty = Math.round(vQty * (ratio / 100));
+            lines.push(`${lService} | ${link} | ${likeQty}`);
           }
         });
       }
-      navigator.clipboard.writeText(lines.join('\n')).then(() => alert('복사 완료!'));
+      const textToCopy = lines.join('\n');
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        alert('표 내용이 복사되었습니다!');
+      });
     }
 
-    for (let i = 0; i < 3; i++) addRow('single');
-    for (let i = 0; i < 3; i++) addRow('combo');
+    // 초기 옵션 세팅 및 기본 행 생성
+    function init() {
+      fillSelectOptions(singleServiceTop, serviceOptions);
+      fillSelectOptions(singleQuantityTop, quantityOptions);
+      fillSelectOptions(comboViewServiceTop, serviceOptions);
+      fillSelectOptions(comboLikeServiceTop, serviceOptions);
+      fillSelectOptions(comboRatioTop, ratioOptions);
+
+      initRows();
+
+      // 최상단 셀렉트 변경시 모든 행 값 업데이트 (수동 변경 가능)
+      singleServiceTop.addEventListener('change', () => updateTableDefaultValues('single'));
+      singleQuantityTop.addEventListener('change', () => updateTableDefaultValues('single'));
+      comboViewServiceTop.addEventListener('change', () => updateTableDefaultValues('combo'));
+      comboLikeServiceTop.addEventListener('change', () => updateTableDefaultValues('combo'));
+      comboRatioTop.addEventListener('change', () => updateTableDefaultValues('combo'));
+    }
+
+    init();
   </script>
 </body>
 </html>
